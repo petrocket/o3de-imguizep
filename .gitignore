@@ -1,0 +1,12 @@
+.idea/
+.vs/
+.vscode/
+.pytest_cache/
+CMakeUserPresets.json
+[Uu]ser/
+.DS_Store
+user*.cfg
+client*.cfg
+server*.cfg
+_savebackup/
+imgui.ini

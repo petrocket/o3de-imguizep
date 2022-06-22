@@ -1,0 +1,246 @@
+diff --git a/include/zep/display.h b/include/zep/display.h
+index bdf2c87a..9ee54857 100644
+--- a/include/zep/display.h
++++ b/include/zep/display.h
+@@ -37,6 +37,7 @@ public:
+         : m_display(display)
+     {
+     }
++    virtual ~ZepFont() {}
+    
+     // Implemented in API specific ways
+     virtual void SetPixelHeight(int height) = 0;
+diff --git a/include/zep/editor.h b/include/zep/editor.h
+index 99347627..a18f7209 100644
+--- a/include/zep/editor.h
++++ b/include/zep/editor.h
+@@ -131,6 +131,7 @@ struct IZepComponent
+ {
+     virtual void Notify(std::shared_ptr<ZepMessage> message) { ZEP_UNUSED(message); };
+     virtual ZepEditor& GetEditor() const = 0;
++    virtual ~IZepComponent() {}
+ };
+ 
+ class ZepComponent : public IZepComponent
+@@ -255,7 +256,7 @@ class ZepEditor
+ public:
+     // Root path is the path to search for a config file
+     ZepEditor(ZepDisplay* pDisplay, const ZepPath& root, uint32_t flags = 0, IZepFileSystem* pFileSystem = nullptr);
+-    ~ZepEditor();
++    virtual ~ZepEditor();
+ 
+     void LoadConfig(const ZepPath& config_path);
+     void LoadConfig(std::shared_ptr<cpptoml::table> spConfig);
+diff --git a/include/zep/imgui/display_imgui.h b/include/zep/imgui/display_imgui.h
+index 53c92558..aa8eb170 100644
+--- a/include/zep/imgui/display_imgui.h
++++ b/include/zep/imgui/display_imgui.h
+@@ -1,7 +1,7 @@
+ #pragma once
+ #include "../display.h"
+ #include "../syntax.h"
+-#include <imgui.h>
++#include <imgui/imgui.h>
+ #include <string>
+ 
+ // Can't include this publicly
+diff --git a/include/zep/imgui/editor_imgui.h b/include/zep/imgui/editor_imgui.h
+index 820ab01d..ac9f0756 100644
+--- a/include/zep/imgui/editor_imgui.h
++++ b/include/zep/imgui/editor_imgui.h
+@@ -49,7 +49,7 @@ class ZepTabWindow;
+ class ZepEditor_ImGui : public ZepEditor
+ {
+ public:
+-    ZepEditor_ImGui(const ZepPath& root, const NVec2f& pixelScale, uint32_t flags = 0, IZepFileSystem* pFileSystem = nullptr)
++    ZepEditor_ImGui(const ZepPath& root, const NVec2f& /* pixelScale*/, uint32_t flags = 0, IZepFileSystem* pFileSystem = nullptr)
+         : ZepEditor(new ZepDisplay_ImGui(), root, flags, pFileSystem)
+     {
+     }
+diff --git a/include/zep/line_widgets.h b/include/zep/line_widgets.h
+index b2efef00..5ea3f769 100644
+--- a/include/zep/line_widgets.h
++++ b/include/zep/line_widgets.h
+@@ -7,6 +7,7 @@ namespace Zep
+ 
+ struct IWidget
+ {
++    virtual ~IWidget() {}
+     virtual NVec2f GetSize() const = 0; // Required size of the widget
+     virtual void MouseDown(const NVec2f& pos, ZepMouseButton button) = 0;
+     virtual void MouseUp(const NVec2f& pos, ZepMouseButton button) = 0;
+diff --git a/include/zep/mcommon/file/cpptoml.h b/include/zep/mcommon/file/cpptoml.h
+index 191c9f0f..bfe824bf 100644
+--- a/include/zep/mcommon/file/cpptoml.h
++++ b/include/zep/mcommon/file/cpptoml.h
+@@ -22,6 +22,7 @@
+ #include <unordered_map>
+ #include <vector>
+ 
++
+ #if __cplusplus > 201103L
+ #define CPPTOML_DEPRECATED(reason) [[deprecated(reason)]]
+ #elif defined(__clang__)
+@@ -36,6 +37,9 @@
+ #endif
+ #endif
+ 
++#pragma warning( push) 
++#pragma warning( disable : 4530 )
++
+ namespace cpptoml
+ {
+ class writer; // forward declaration
+@@ -3672,4 +3676,5 @@ inline std::ostream& operator<<(std::ostream& stream, const array& a)
+     return stream;
+ }
+ } // namespace cpptoml
++#pragma warning( pop )
+ #endif // CPPTOML_H
+diff --git a/include/zep/mode_tree.h b/include/zep/mode_tree.h
+index a2ad9708..7271c5a9 100644
+--- a/include/zep/mode_tree.h
++++ b/include/zep/mode_tree.h
+@@ -24,6 +24,7 @@ public:
+     using TChildren = std::vector<TNode>;
+ 
+     ZepTreeNode(const std::string& strName, uint32_t flags = ZepTreeNodeFlags::None);
++    virtual ~ZepTreeNode() {}
+ 
+     virtual const std::string& GetName() const { return m_strName; }
+     virtual void SetName(const std::string& name) { m_strName = name; }
+@@ -105,6 +106,7 @@ class ZepTree
+ {
+ public:
+     virtual ZepTreeNode* GetRoot() const { return m_spRoot.get(); }
++    virtual ~ZepTree() {}
+ 
+ protected:
+     ZepTreeNode::TNode m_spRoot;
+@@ -118,12 +120,14 @@ public:
+     {
+ 
+     }
++    virtual ~ZepFileNode() {}
+ };
+ 
+ class ZepFileTree : public ZepTree
+ {
+ public:
+     ZepFileTree();
++    virtual ~ZepFileTree() {}
+ 
+ };
+ 
+diff --git a/include/zep/range_markers.h b/include/zep/range_markers.h
+index 3798e4f1..452d8548 100644
+--- a/include/zep/range_markers.h
++++ b/include/zep/range_markers.h
+@@ -65,6 +65,7 @@ enum class ToolTipPos
+ struct RangeMarker : std::enable_shared_from_this<RangeMarker>
+ {
+     RangeMarker(ZepBuffer& buffer);
++    virtual ~RangeMarker() {}
+ 
+     bool ContainsLocation(GlyphIterator loc) const;
+     bool IntersectsRange(const ByteRange& i) const;
+diff --git a/src/editor.cpp b/src/editor.cpp
+index 5acc5dbb..07ba8809 100644
+--- a/src/editor.cpp
++++ b/src/editor.cpp
+@@ -13,6 +13,8 @@
+ 
+ #include <unordered_set>
+ 
++#pragma warning(push)
++#pragma warning(disable:4530 4244)
+ namespace Zep
+ {
+ #ifdef _DEBUG
+@@ -1394,3 +1396,4 @@ const ZepPath& ZepEditor::GetConfigRoot() const
+ }
+ 
+ } // namespace Zep
++#pragma warning(pop)
+diff --git a/src/filesystem.cpp b/src/filesystem.cpp
+index 6a1d7479..6fce219e 100644
+--- a/src/filesystem.cpp
++++ b/src/filesystem.cpp
+@@ -10,6 +10,8 @@
+ 
+ #if defined(ZEP_FEATURE_CPP_FILE_SYSTEM)
+ 
++#pragma warning(push)
++#pragma warning(disable:4530)
+ #include <filesystem>
+ namespace cpp_fs = std::filesystem;
+ 
+@@ -271,4 +273,5 @@ void ZepFileSystemCPP::SetFlags(uint32_t flags)
+ 
+ } // namespace Zep
+ 
++#pragma warning(pop)
+ #endif // CPP_FILESYSTEM
+diff --git a/src/indexer.cpp b/src/indexer.cpp
+index 822c47dd..894a0fd1 100644
+--- a/src/indexer.cpp
++++ b/src/indexer.cpp
+@@ -6,6 +6,8 @@
+ #include "zep/filesystem.h"
+ #include "zep/indexer.h"
+ 
++#pragma warning(push)
++#pragma warning(disable:4530)
+ namespace Zep
+ {
+ 
+@@ -294,3 +296,4 @@ bool Indexer::StartIndexing()
+ }
+ 
+ } // namespace Zep
++#pragma warning(pop)
+diff --git a/src/keymap.cpp b/src/keymap.cpp
+index 41b31b55..db62b4a7 100644
+--- a/src/keymap.cpp
++++ b/src/keymap.cpp
+@@ -6,6 +6,8 @@
+ 
+ #include "zep/mcommon/logger.h"
+ 
++#pragma warning(push)
++#pragma warning(disable:4530)
+ namespace Zep
+ {
+ 
+@@ -390,3 +392,4 @@ void keymap_find(const KeyMap& map, const std::string& strCommand, KeyMapResult&
+ }
+ 
+ } // namespace Zep
++#pragma warning(pop)
+diff --git a/src/mode.cpp b/src/mode.cpp
+index a9fe900d..14858804 100644
+--- a/src/mode.cpp
++++ b/src/mode.cpp
+@@ -8,6 +8,8 @@
+ #include "zep/syntax.h"
+ #include "zep/tab_window.h"
+ 
++#pragma warning(push)
++#pragma warning(disable:4530)
+ namespace Zep
+ {
+ CommandContext::CommandContext(const std::string& commandIn, ZepMode& md, EditorMode editorMode)
+@@ -377,7 +379,7 @@ void ZepMode::AddKeyPress(uint32_t key, uint32_t modifierKeys)
+     key &= 0xFF;
+ 
+     // Keys in this range converted to UTF8.  I need to figure out how to generically receive UTF8 here, but this
+-    // temporary fix enables £-sign and other specials to display and work correctly
++    // temporary fix enables Â£-sign and other specials to display and work correctly
+     if (key >= 127 && key <= 255)
+     {
+ 
+@@ -2724,3 +2726,4 @@ void ZepMode::Begin(ZepWindow* pWindow)
+ }
+ 
+ } // namespace Zep
++#pragma warning(pop)
