@@ -89,9 +89,6 @@ ly_add_target(
         ${pal_dir}/imguizep_private_files.cmake
     TARGET_PROPERTIES
         O3DE_PRIVATE_TARGET TRUE
-    COMPILE_DEFINITIONS
-        PRIVATE
-            IMGUIZEP_ROOT ${CMAKE_CURRENT_LIST_DIR}
     INCLUDE_DIRECTORIES
         PRIVATE
             Include
